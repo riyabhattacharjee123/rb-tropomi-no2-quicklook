@@ -15,7 +15,7 @@ It demonstrates cloud-native Earth Observation (EO) data pipelines with:
 
 ---
 
-## 🚀 Features
+##  Features
 
 - **`/stats`** – compute count, min, mean, max (with QA filtering)
 - **`/histogram`** – compute histogram bins + counts
@@ -26,31 +26,31 @@ It demonstrates cloud-native Earth Observation (EO) data pipelines with:
 
 ---
 
-## 📂 Project Structure
+##  Project Structure
 
-rb-tropomi-no2-quicklook/
-├── app/ # FastAPI entrypoint
-│ └── api.py
-├── tropomi/ # EO processing modules
-│ ├── io.py
-│ ├── qa.py
-│ ├── no2.py
-│ └── render.py
-├── tests/ # pytest + synthetic data
-│ ├── conftest.py
-│ ├── test_synthetic.py
-│ └── data/
-├── tools/ # utilities
-│ └── regen_synth.py
-├── requirements.txt # pinned dependencies
-├── Dockerfile # container build
-├── Makefile # developer shortcuts
-└── README.md
+rb-tropomi-no2-quicklook/  
+├── app/ # FastAPI entrypoint  
+│ └── api.py  
+├── tropomi/ # EO processing modules  
+│ ├── io.py  
+│ ├── qa.py  
+│ ├── no2.py  
+│ └── render.py  
+├── tests/ # pytest + synthetic data  
+│ ├── conftest.py  
+│ ├── test_synthetic.py  
+│ └── data/  
+├── tools/ # utilities  
+│ └── regen_synth.py  
+├── requirements.txt # pinned dependencies  
+├── Dockerfile # container build  
+├── Makefile # developer shortcuts  
+└── README.md  
 
 
 ---
 
-## 🛠️ Setup & Usage
+##  Setup & Usage
 
 ### 1. Local development (Codespaces or host)
 ```bash
@@ -86,7 +86,7 @@ open http://localhost:8000/redoc  # ReDoc
 
 #### Example Output
 Stats
-
+```
 {
   "count": 1024,
   "min": 4.22e-09,
@@ -94,90 +94,92 @@ Stats
   "max": 9.99e-06,
   "qa_threshold": 0.75
 }
-
+```
 
 Histogram
-
+```
 {
   "qa_threshold": 0.75,
   "bins": 12,
   "bin_edges": [...],
   "counts": [...]
 }
+```
 
-
-Quicklook
+Quicklook  
 Generated PNG example (quicklook.png):
 
-🔧 Developer Workflow (Makefile)
-Command	Description
-make setup	Install dependencies
-make regen-synth	Generate synthetic NetCDF test file
-make test	Run pytest
-make build	Build Docker image
-make run	Run container (port 8000 → FastAPI)
-make clean	Remove caches (pycache, pytest)
-make docker-clean	Prune dangling Docker images
-make lint	Run flake8 (if installed)
-make format	Run black (if installed)
-🧪 Testing
+#### Developer Workflow (Makefile)
+```bash
+# Command	Description
+make setup	#Install dependencies
+make regen-synth	#Generate synthetic NetCDF test file
+make test	#Run pytest
+make build	#Build Docker image
+make run	#Run container (port 8000 → FastAPI)
+make clean	#Remove caches (pycache, pytest)
+make docker-clean	#Prune dangling Docker images
+make lint	#Run flake8 (if installed)
+make format	#Run black (if installed)
+```
+### 4. Testing
 
-Uses synthetic NetCDF (tests/data/synthetic.nc) for fast, portable CI.
+- Uses synthetic NetCDF (tests/data/synthetic.nc) for fast, portable CI.
 
-Pure-Python SciPy engine → no native library headaches.
+- Pure-Python SciPy engine → no native library headaches.
 
-CI pipeline (GitHub Actions) runs:
+- CI pipeline (GitHub Actions) runs:
 
-install deps
+- install deps
 
-generate synthetic file
+- generate synthetic file
 
-run pytest
+- run pytest
 
-build Docker image
+- build Docker image
 
-🌐 Deployment Ideas
+### 5. Deployment Ideas
 
-Deploy on Kubernetes or Docker Swarm with Traefik ingress.
+- Deploy on Kubernetes or Docker Swarm with Traefik ingress.
 
-Wire Prometheus → Grafana dashboards for NO₂ stats/histograms.
+- Wire Prometheus → Grafana dashboards for NO₂ stats/histograms.
 
-Extend with Airflow DAGs to batch-process EO files.
+- Extend with Airflow DAGs to batch-process EO files.
 
-Ingest real Sentinel-5P L2 NO₂ NetCDFs (swap synthetic data for ESA downloads).
+- Ingest real Sentinel-5P L2 NO₂ NetCDFs (swap synthetic data for ESA downloads).
 
-🎯 Why This Project
+## Why This Project
 
 This repo is part of my cloud + DevOps + EO learning journey.
 It shows how to:
 
-Build EO-specific APIs with FastAPI
+- Build EO-specific APIs with FastAPI
 
-Use xarray for satellite data analysis
+- Use xarray for satellite data analysis
 
-Containerize with Docker
+- Containerize with Docker
 
-Add CI/CD pipelines
+- Add CI/CD pipelines
 
-Expose metrics for monitoring
+- Expose metrics for monitoring
 
-Follow clean DevOps workflows
+- Follow clean DevOps workflows
 
-Perfect for learning, interviews, and as a template for larger EO pipelines.
+- Perfect for learning, and as a template for larger EO pipelines.
 
-📌 Roadmap
+## Roadmap
 
- Add /histogram_png endpoint (matplotlib bar plot)
+- Add /histogram_png endpoint (matplotlib bar plot)
 
- Add /stats_csv endpoint for CSV downloads
+- Add /stats_csv endpoint for CSV downloads
 
- Batch ingestion pipeline with Airflow
+- Batch ingestion pipeline with Airflow
 
- Deploy demo on Dask-Gateway or HTCondor
+- Deploy demo on Dask-Gateway or HTCondor
 
- Grafana dashboard for NO₂ trends
+- Grafana dashboard for NO₂ trends
 
-📜 License
+### License
 
 MIT — feel free to reuse and extend.
 
