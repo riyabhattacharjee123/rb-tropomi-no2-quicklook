@@ -62,7 +62,7 @@ make test          # run pytest
 ### 2. Docker build & run
 ```bash
 make build
-make run
+APP_VERSION=$(git rev-parse --short HEAD) make run
 ```
 
 ### 3. Endpoints (example curl)
@@ -75,6 +75,10 @@ curl -F "file=@tests/data/synthetic.nc" "http://localhost:8000/histogram?qa=0.75
 
 # Quicklook (PNG saved to file)
 curl -F "file=@tests/data/synthetic.nc" "http://localhost:8000/quicklook?qa=0.75" -o quicklook.png
+curl -F "file=@tests/data/synthetic.nc" "http://localhost:8000/histogram_png?qa=0.75&bins=12" -o hist.png
+
+# CSV: summary stats
+curl -F "file=@tests/data/synthetic.nc" "http://localhost:8000/stats_csv?qa=0.75" -o stats.csv
 
 # Metrics
 curl "http://localhost:8000/metrics" | head
@@ -108,6 +112,15 @@ Histogram
 
 Quicklook  
 Generated PNG example (quicklook.png):
+
+#### Configuration
+
+Environment variables:
+
+`APP_VERSION` – shown in /info (set from git short SHA in dev)
+
+`MAX_UPLOAD` – max upload size in bytes (default: 20 MB)
+
 
 #### Developer Workflow (Makefile)
 ```bash
