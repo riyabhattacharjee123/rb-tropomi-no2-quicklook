@@ -180,6 +180,38 @@ It shows how to:
 
 - Perfect for learning, and as a template for larger EO pipelines.
 
+###  Run from GHCR
+
+```bash
+docker pull ghcr.io/riyabhattacharjee123/tropomi-no2-quicklook:latest
+docker run --rm -p 8000:8000 \
+  -e APP_VERSION=$(date +%Y%m%d%H%M) \
+  ghcr.io/riyabhattacharjee123/tropomi-no2-quicklook:latest
+```
+
+Open in web browser:  
+`https://scaling-garbanzo-v5q4w4jv5jr3wj5v-8000.app.github.dev/docs`  
+and  
+`https://scaling-garbanzo-v5q4w4jv5jr3wj5v-8000.app.github.dev/metrics`  
+
+Quick cURL tests (from another terminal tab while the container runs):
+
+```bash
+# JSON
+curl -F "file=@tests/data/synthetic.nc" "http://localhost:8000/stats?qa=0.75"
+
+curl -F "file=@tests/data/synthetic.nc" "http://localhost:8000/histogram?qa=0.75&bins=12"
+
+# PNGs
+curl -F "file=@tests/data/synthetic.nc" "http://localhost:8000/quicklook?qa=0.75" -o quicklook.png
+
+curl -F "file=@tests/data/synthetic.nc" "http://localhost:8000/histogram_png?qa=0.75&bins=12" -o hist.png
+
+# CSV
+curl -F "file=@tests/data/synthetic.nc" "http://localhost:8000/stats_csv?qa=0.75" -o stats.csv
+```
+
+
 ## Roadmap
 
 - Add /histogram_png endpoint (matplotlib bar plot)
