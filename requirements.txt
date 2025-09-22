@@ -18,3 +18,4 @@ requests==2.32.3           # (Optional) HTTP calls if you add URL ingestion late
 pytest==8.3.2              # Testing framework (CI runs it)
 python-multipart==0.0.9    # Form data requires
 scipy==1.13.1               # For some extra numerical operations
+sqlalchemy==2.0.36

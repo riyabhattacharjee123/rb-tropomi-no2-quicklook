@@ -1,0 +1,34 @@
+<!doctype html>
+<html>
+  <head><meta charset="utf-8"><title>NO₂ test client</title></head>
+  <body>
+    <h3>Upload synthetic.nc and call endpoints</h3>
+    <input type="file" id="file"><br><br>
+    <label>QA: <input id="qa" type="number" step="0.01" value="0.75"></label>
+    <label>Bins: <input id="bins" type="number" value="12"></label><br><br>
+    <button onclick="call('/stats')">/stats (JSON)</button>
+    <button onclick="call('/histogram')">/histogram (JSON)</button>
+    <button onclick="download('/quicklook')">/quicklook (PNG)</button>
+    <button onclick="download('/histogram_png?bins='+document.getElementById('bins').value)">/histogram_png (PNG)</button>
+    <button onclick="download('/stats_csv')">/stats_csv (CSV)</button>
+    <pre id="out"></pre>
+    <script>
+      const base = location.origin;
+      function fd(){ const f = new FormData(); f.append('file', document.getElementById('file').files[0]); return f; }
+      async function call(path){
+        const qa = document.getElementById('qa').value;
+        const r = await fetch(base + path + '?qa='+qa, {method:'POST', body: fd()});
+        document.getElementById('out').textContent = await r.text();
+      }
+      async function download(path){
+        const qa = document.getElementById('qa').value;
+        const r = await fetch(base + path + (path.includes('?')?'&':'?') + 'qa='+qa, {method:'POST', body: fd()});
+        const blob = await r.blob();
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = path.replace('/','') + '.bin';
+        a.click();
+      }
+    </script>
+  </body>
+</html>

@@ -18,6 +18,11 @@ from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_
 from tropomi.no2 import no2_stats, no2_histogram
 from tropomi.render import quicklook_png, histogram_png as histogram_png_render
 
+from app.db import init_db, engine
+init_db()
+from sqlalchemy import text as _sqltext
+
+
 # -------- Settings --------
 APP_VERSION = os.getenv("APP_VERSION", "0.1.0")
 MAX_UPLOAD = int(os.getenv("MAX_UPLOAD", 20 * 1024 * 1024))  # 20 MB default
@@ -89,6 +94,12 @@ async def stats(file: UploadFile, qa: float = Query(0.75, ge=0.0, le=1.0)):
         raw = await _read_small_file(file)
         ds = _open_ds(raw)
         result = no2_stats(ds, qa_thresh=qa)
+        with engine.begin() as conn:
+            conn.execute(_sqltext("""
+            INSERT INTO stats (qa_threshold, count, min, mean, max)
+            VALUES (:qa, :count, :min, :mean, :max)
+            """), dict(qa=result["qa_threshold"], count=result["count"],
+                    min=result["min"], mean=result["mean"], max=result["max"]))
         return JSONResponse(result)
     except Exception as e:
         ERRORS.labels(endpoint).inc()
@@ -176,3 +187,13 @@ async def stats_csv(file: UploadFile, qa: float = Query(0.75, ge=0.0, le=1.0)):
         raise HTTPException(400, f"Failed to produce stats CSV: {e}")
     finally:
         LATENCY.labels(endpoint).observe(time.time() - start)
+        
+@app.get("/stats_recent", tags=["analysis"], summary="Recent stats from DB")
+def stats_recent(limit: int = Query(10, ge=1, le=100)):
+    with engine.begin() as conn:
+        rows = conn.execute(_sqltext("""
+          SELECT created_at, qa_threshold, count, min, mean, max
+          FROM stats ORDER BY id DESC LIMIT :lim
+        """), dict(lim=limit)).mappings().all()
+    return {"items": [dict(r) for r in rows]}
+
