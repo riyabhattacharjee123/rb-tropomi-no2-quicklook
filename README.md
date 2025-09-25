@@ -17,11 +17,15 @@ It demonstrates cloud-native Earth Observation (EO) data pipelines with:
 
 ##  Features
 
-- **`/stats`** – compute count, min, mean, max (with QA filtering)
-- **`/histogram`** – compute histogram bins + counts
-- **`/quicklook`** – generate a PNG heatmap of NO₂
-- **`/metrics`** – Prometheus metrics (request count, latency, errors)
-- **`/health`** – container liveness probe
+- **`/stats`** – compute count, min, mean, max (with QA filtering)  
+- **`/histogram`** – compute histogram bins + counts  
+- **`/quicklook`** – generate a PNG heatmap of NO₂  
+- **`/histogram_png`** – histogram as a PNG bar plot  
+- **`/stats_csv`** – download stats as CSV  
+- **`/tile_png`** – return cropped tile PNG (like map tiles)  
+- **`/stats_recent`** – read back recent stats from SQLite DB  
+- **`/metrics`** – Prometheus metrics (request count, latency, errors)  
+- **`/health`** – container liveness probe  
 - **`/info`** – service metadata (name, version, about)
 
 ---
@@ -29,8 +33,9 @@ It demonstrates cloud-native Earth Observation (EO) data pipelines with:
 ##  Project Structure
 
 rb-tropomi-no2-quicklook/  
-├── app/ # FastAPI entrypoint  
+├── app/ # FastAPI entrypoint + DB 
 │ └── api.py  
+│ └── db.py  
 ├── tropomi/ # EO processing modules  
 │ ├── io.py  
 │ ├── qa.py  
@@ -39,13 +44,30 @@ rb-tropomi-no2-quicklook/
 ├── tests/ # pytest + synthetic data  
 │ ├── conftest.py  
 │ ├── test_synthetic.py  
+│ ├── test_db_recent.py  
 │ └── data/  
 ├── tools/ # utilities  
 │ └── regen_synth.py  
+│ └── test_client.html  
 ├── requirements.txt # pinned dependencies  
 ├── Dockerfile # container build  
 ├── Makefile # developer shortcuts  
 └── README.md  
+├── Makefile # developer shortcuts  
+└── .github  # CI/CD pipeline  
+│ ├── workflows  
+|   ├── ci.yml  
+└── grafana  # example dashboards  
+│ ├── dashboards  
+|   ├── no2-overview.json  
+├── prometheus.yml  # Prometheus scrape config  
+├── compose.yml  # Prometheus + Grafana stack  
+├── requirements.txt  # pinned dependencies  
+├── Makefile  # developer shortcuts  
+├── Dockerfile  # container build  
+├── README.md  
+└── bash_run_1.sh  
+
 
 
 ---
@@ -67,10 +89,10 @@ APP_VERSION=$(git rev-parse --short HEAD) make run
 
 ### 3. Endpoints (example curl)
 ```bash
-# Stats
+# Stats (JSON)
 curl -F "file=@tests/data/synthetic.nc" "http://localhost:8000/stats?qa=0.75"
 
-# Histogram
+# Histogram (JSON)
 curl -F "file=@tests/data/synthetic.nc" "http://localhost:8000/histogram?qa=0.75&bins=12"
 
 # Quicklook (PNG saved to file)
@@ -79,6 +101,12 @@ curl -F "file=@tests/data/synthetic.nc" "http://localhost:8000/histogram_png?qa=
 
 # CSV: summary stats
 curl -F "file=@tests/data/synthetic.nc" "http://localhost:8000/stats_csv?qa=0.75" -o stats.csv
+
+# Cropped tile (subwindow PNG)
+curl -F "file=@tests/data/synthetic.nc" "http://localhost:8000/tile_png?y0=0&y1=16&x0=0&x1=16&qa=0.75" -o tile.png
+
+# Recent stats from DB
+curl "http://localhost:8000/stats_recent?limit=5"
 
 # Metrics
 curl "http://localhost:8000/metrics" | head
@@ -89,7 +117,7 @@ open http://localhost:8000/redoc  # ReDoc
 ```
 
 #### Example Output
-Stats
+Stats JSON
 ```
 {
   "count": 1024,
@@ -100,7 +128,7 @@ Stats
 }
 ```
 
-Histogram
+Histogram JSON
 ```
 {
   "qa_threshold": 0.75,
@@ -117,7 +145,7 @@ Generated PNG example (quicklook.png):
 
 Environment variables:
 
-`APP_VERSION` – shown in /info (set from git short SHA in dev)
+`APP_VERSION` – shown in `/info` (set from git short SHA in dev)
 
 `MAX_UPLOAD` – max upload size in bytes (default: 20 MB)
 
@@ -137,19 +165,19 @@ make format	#Run black (if installed)
 ```
 ### 4. Testing
 
-- Uses synthetic NetCDF (tests/data/synthetic.nc) for fast, portable CI.
+- Uses synthetic NetCDF `tests/data/synthetic.nc` for fast, portable CI.
 
-- Pure-Python SciPy engine → no native library headaches.
+- Pure-Python SciPy engine → no native library issues.
 
 - CI pipeline (GitHub Actions) runs:
 
-- install deps
+  - install deps
 
-- generate synthetic file
+  - generate synthetic file
 
-- run pytest
+  - run pytest
 
-- build Docker image
+  - build Docker image
 
 ### 5. Deployment Ideas
 
@@ -175,6 +203,8 @@ It shows how to:
 - Add CI/CD pipelines
 
 - Expose metrics for monitoring
+
+- Persist results in SQLite (extendable to Postgres/Cloud DBs)
 
 - Follow clean DevOps workflows
 
@@ -214,9 +244,11 @@ curl -F "file=@tests/data/synthetic.nc" "http://localhost:8000/stats_csv?qa=0.75
 
 ## Roadmap
 
-- Add /histogram_png endpoint (matplotlib bar plot)
+- Add `/histogram_png` endpoint (matplotlib bar plot)
 
-- Add /stats_csv endpoint for CSV downloads
+- Add `/stats_csv` endpoint for CSV downloads
+
+- SQLite persistence + `/stats_recent`
 
 - Batch ingestion pipeline with Airflow
 

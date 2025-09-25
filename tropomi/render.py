@@ -51,3 +51,18 @@ def histogram_png(bin_edges, counts) -> bytes:
     buf.seek(0)
     return buf.read()
 
+def tile_png(ds: xr.Dataset, y0: int, y1: int, x0: int, x1: int, qa_thresh: float = 0.75) -> bytes:
+    """Render a cropped quicklook for the window [y0:y1, x0:x1]."""
+    arr = no2_column(ds).where(valid_mask(ds, qa_thresh)).values
+    # Guard ranges
+    h, w = arr.shape
+    y0 = max(0, min(h, y0)); y1 = max(0, min(h, y1))
+    x0 = max(0, min(w, x0)); x1 = max(0, min(w, x1))
+    if y1 <= y0 or x1 <= x0:
+        raise ValueError("Invalid tile bounds")
+    sub = arr[y0:y1, x0:x1]
+    fig = plt.figure(figsize=(3, 3), dpi=150); ax = plt.gca()
+    im = ax.imshow(sub, origin="upper"); ax.set_axis_off()
+    buf = io.BytesIO(); plt.tight_layout(); fig.savefig(buf, format="png", bbox_inches="tight", pad_inches=0)
+    plt.close(fig); buf.seek(0); return buf.read()
+
