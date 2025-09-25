@@ -19,3 +19,4 @@ skip = ["venv", ".venv", ".git", "grafana"]
 python_version = "3.11"
 ignore_missing_imports = true
 strict = false
+explicit_package_bases = true
