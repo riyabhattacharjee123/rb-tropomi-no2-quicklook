@@ -6,9 +6,31 @@ on:
   workflow_dispatch:   # lets you click "Run workflow" manually
 
 jobs:
+  # 0) Lint and type check (no dependencies)
+  lint-and-types:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dev tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+      - name: Lint (flake8)
+        run: flake8 app tropomi tests
+      - name: Format check (black)
+        run: black --check app tropomi tests
+      - name: Import order (isort)
+        run: isort --check-only app tropomi tests
+      - name: Type check (mypy)
+        run: mypy app tropomi
+
   # 1) Run tests and do a local Docker build (no push)
   test-and-build:
     runs-on: ubuntu-latest
+    needs: lint-and-types
     steps:
       # Pull repo
       - name: Checkout
@@ -88,3 +110,5 @@ jobs:
           cache-to: type=gha,mode=max
           # If you need multi-arch later, uncomment:
           # platforms: linux/amd64,linux/arm64
+
+

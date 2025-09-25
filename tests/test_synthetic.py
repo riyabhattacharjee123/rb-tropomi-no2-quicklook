@@ -2,8 +2,9 @@
 # Purpose: Make CI reliable without downloading huge files.
 
 from tropomi.io import open_netcdf
-from tropomi.no2 import no2_stats, no2_histogram
+from tropomi.no2 import no2_histogram, no2_stats
 from tropomi.render import quicklook_png
+
 
 def test_stats_hist_quicklook():
     ds = open_netcdf("tests/data/synthetic.nc")

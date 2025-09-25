@@ -2,48 +2,30 @@
 # Purpose: Visual quicklook to 'see' the field after QA filtering. (quicklook PNG)
 # Why: Quick visual validation is powerful and interviewers love demos.
 
+from __future__ import annotations
+
 import io
-import numpy as np
-import xarray as xr
+from typing import Sequence
+
 import matplotlib.pyplot as plt
+import xarray as xr
+
 from .io import no2_column
 from .qa import valid_mask
 
+
 def quicklook_png(ds: xr.Dataset, qa_thresh: float = 0.75) -> bytes:
     """
-    Render an imshow PNG for valid NO2 pixels. Returns raw PNG bytes.
+    Render a simple heatmap PNG of the QA-filtered NO2 column.
     """
-    no2 = no2_column(ds)
-    mask = valid_mask(ds, qa_thresh)
-    arr = no2.where(mask).values
+    arr = no2_column(ds).where(valid_mask(ds, qa_thresh)).values
 
-    fig = plt.figure(figsize=(4, 3), dpi=150)
+    fig = plt.figure(figsize=(4, 4), dpi=150)
     ax = plt.gca()
-    im = ax.imshow(arr, origin="upper")
+    ax.imshow(arr, origin="upper")  # <-- no assignment
+    ax.set_title("NO₂ quicklook")
     ax.set_axis_off()
-    fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04, label="Tropospheric NO₂")
 
-    buf = io.BytesIO()
-    plt.tight_layout()
-    fig.savefig(buf, format="png", bbox_inches=0, pad_inches=0)
-    plt.close(fig)
-    buf.seek(0)
-    return buf.read()
-
-def histogram_png(bin_edges, counts) -> bytes:
-    import io
-    import numpy as np
-    import matplotlib.pyplot as plt
-
-    edges = np.array(bin_edges)
-    centers = (edges[:-1] + edges[1:]) / 2.0
-    width = (centers[1] - centers[0]) if len(centers) > 1 else 1.0
-
-    fig = plt.figure(figsize=(4, 3), dpi=150)
-    ax = plt.gca()
-    ax.bar(centers, counts, width=width)
-    ax.set_xlabel("Tropospheric NO₂")
-    ax.set_ylabel("Count")
     buf = io.BytesIO()
     plt.tight_layout()
     fig.savefig(buf, format="png", bbox_inches="tight", pad_inches=0)
@@ -51,18 +33,68 @@ def histogram_png(bin_edges, counts) -> bytes:
     buf.seek(0)
     return buf.read()
 
-def tile_png(ds: xr.Dataset, y0: int, y1: int, x0: int, x1: int, qa_thresh: float = 0.75) -> bytes:
-    """Render a cropped quicklook for the window [y0:y1, x0:x1]."""
+
+def histogram_png(bin_edges: Sequence[float], counts: Sequence[int]) -> bytes:
+    """
+    Render a histogram (bins + counts) as a bar chart PNG.
+    """
+    fig = plt.figure(figsize=(4, 3), dpi=150)
+    ax = plt.gca()
+
+    # Convert edges->centers for a simple bar plot
+    centers = []
+    widths = []
+    for i in range(len(bin_edges) - 1):
+        a = bin_edges[i]
+        b = bin_edges[i + 1]
+        centers.append(0.5 * (a + b))
+        widths.append(b - a)
+
+    ax.bar(centers, counts, width=widths, align="center")
+    ax.set_title("NO₂ histogram")
+    ax.set_xlabel("NO₂ column")
+    ax.set_ylabel("Count")
+
+    buf = io.BytesIO()
+    plt.tight_layout()
+    fig.savefig(buf, format="png", bbox_inches="tight", pad_inches=0)
+    plt.close(fig)
+    buf.seek(0)
+    return buf.read()
+
+
+def tile_png(
+    ds: xr.Dataset,
+    y0: int,
+    y1: int,
+    x0: int,
+    x1: int,
+    qa_thresh: float = 0.75,
+) -> bytes:
+    """
+    Render a cropped quicklook for the window [y0:y1, x0:x1] after QA filtering.
+    """
     arr = no2_column(ds).where(valid_mask(ds, qa_thresh)).values
-    # Guard ranges
     h, w = arr.shape
-    y0 = max(0, min(h, y0)); y1 = max(0, min(h, y1))
-    x0 = max(0, min(w, x0)); x1 = max(0, min(w, x1))
+
+    # Clamp ranges to image bounds
+    y0 = max(0, min(h, y0))
+    y1 = max(0, min(h, y1))
+    x0 = max(0, min(w, x0))
+    x1 = max(0, min(w, x1))
     if y1 <= y0 or x1 <= x0:
         raise ValueError("Invalid tile bounds")
-    sub = arr[y0:y1, x0:x1]
-    fig = plt.figure(figsize=(3, 3), dpi=150); ax = plt.gca()
-    im = ax.imshow(sub, origin="upper"); ax.set_axis_off()
-    buf = io.BytesIO(); plt.tight_layout(); fig.savefig(buf, format="png", bbox_inches="tight", pad_inches=0)
-    plt.close(fig); buf.seek(0); return buf.read()
 
+    sub = arr[y0:y1, x0:x1]
+
+    fig = plt.figure(figsize=(3, 3), dpi=150)
+    ax = plt.gca()
+    ax.imshow(sub, origin="upper")
+    ax.set_axis_off()
+
+    buf = io.BytesIO()
+    plt.tight_layout()
+    fig.savefig(buf, format="png", bbox_inches="tight", pad_inches=0)
+    plt.close(fig)
+    buf.seek(0)
+    return buf.read()

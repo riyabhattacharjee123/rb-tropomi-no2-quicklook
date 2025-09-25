@@ -4,7 +4,9 @@
 
 import numpy as np
 import xarray as xr
-from .io import no2_column, get_var
+
+from .io import get_var, no2_column
+
 
 def qa_field(ds: xr.Dataset) -> xr.DataArray | np.ndarray:
     """
@@ -16,6 +18,7 @@ def qa_field(ds: xr.Dataset) -> xr.DataArray | np.ndarray:
     except KeyError:
         # Fallback behavior: if no QA is available, use finite NO2 as 'valid'
         return np.isfinite(no2_column(ds).values)
+
 
 def valid_mask(ds: xr.Dataset, threshold: float = 0.75) -> xr.DataArray | np.ndarray:
     """

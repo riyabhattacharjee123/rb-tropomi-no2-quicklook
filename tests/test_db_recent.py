@@ -1,18 +1,17 @@
 # tests/test_db_recent.py
-import os
-import json
-import subprocess
 from pathlib import Path
+
 
 def test_stats_recent_roundtrip():
     # Ensure synthetic file exists
     p = Path("tests/data/synthetic.nc")
     assert p.exists(), "Run: python tools/regen_synth.py"
 
-    # Start app container for a quick integration test (ephemeral)
-    # If your local app is already running, you can skip this and just curl localhost:8000
-    # Here we use uvicorn directly for speed in CI-like run:
-    import uvicorn, threading
+    # Start app (local, no Docker) for a quick integration-style test
+    import threading
+
+    import uvicorn
+
     from app.api import app
 
     server = threading.Thread(
@@ -22,12 +21,16 @@ def test_stats_recent_roundtrip():
     )
     server.start()
 
-    import time, requests
+    import time
+
+    import requests
+
     time.sleep(0.8)  # give server a moment
 
     # 1) POST /stats (writes to DB)
-    files = {"file": p.open("rb")}
-    r = requests.post("http://127.0.0.1:9000/stats?qa=0.75", files=files, timeout=5)
+    with p.open("rb") as fh:
+        files = {"file": fh}
+        r = requests.post("http://127.0.0.1:9000/stats?qa=0.75", files=files, timeout=5)
     assert r.ok, r.text
     data = r.json()
     assert "count" in data and data["count"] > 0

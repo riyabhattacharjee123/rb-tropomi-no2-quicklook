@@ -24,34 +24,32 @@
 
 from __future__ import annotations
 
+import csv
+
 # ---- Standard libs
 import io
-import os
-import time
-import csv
-import sys
 import json
 import logging
+import os
+import sys
+import time
 
 # ---- Third-party libs
 import xarray as xr
-from fastapi import FastAPI, UploadFile, HTTPException, Query
-from fastapi.responses import JSONResponse, Response
+from fastapi import FastAPI, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, Response
+from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
 from pydantic import BaseModel
-from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 from sqlalchemy import text as _sqltext  # used for simple inserts/selects
 
-# ---- Our EO logic (you created these modules)
-from tropomi.no2 import no2_stats, no2_histogram
-from tropomi.render import (
-    quicklook_png,
-    histogram_png as histogram_png_render,
-    tile_png,
-)
-
 # ---- Local DB helper (SQLite by default)
-from app.db import init_db, engine
+from app.db import engine, init_db
+
+# ---- Our EO logic (you created these modules)
+from tropomi.no2 import no2_histogram, no2_stats
+from tropomi.render import histogram_png as histogram_png_render
+from tropomi.render import quicklook_png, tile_png
 
 # ==============================================================================
 # Settings & App setup
@@ -86,7 +84,7 @@ app = FastAPI(
 # For production, restrict allow_origins to your domain(s).
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],        # DEMO-ONLY; tighten in production
+    allow_origins=["*"],  # DEMO-ONLY; tighten in production
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -103,6 +101,7 @@ ERRORS = Counter("api_errors_total", "API errors", ["endpoint"])
 # ==============================================================================
 # Pydantic response models (for clean OpenAPI docs)
 # ==============================================================================
+
 
 class StatsResponse(BaseModel):
     count: int
@@ -122,6 +121,7 @@ class HistogramResponse(BaseModel):
 # ==============================================================================
 # Internal helpers (safety & robustness)
 # ==============================================================================
+
 
 async def _read_small_file(file: UploadFile) -> bytes:
     """
@@ -152,6 +152,7 @@ def _open_ds(raw: bytes) -> xr.Dataset:
 # Basic ops endpoints
 # ==============================================================================
 
+
 @app.get("/health", tags=["ops"], summary="Liveness check")
 def health():
     REQUESTS.labels("health").inc()
@@ -181,6 +182,7 @@ def metrics():
 # ==============================================================================
 # Analysis endpoints
 # ==============================================================================
+
 
 @app.post("/stats", response_model=StatsResponse, tags=["analysis"], summary="NO₂ stats (JSON)")
 async def stats(file: UploadFile, qa: float = Query(0.75, ge=0.0, le=1.0)):
@@ -224,7 +226,12 @@ async def stats(file: UploadFile, qa: float = Query(0.75, ge=0.0, le=1.0)):
         LATENCY.labels(endpoint).observe(time.time() - start)
 
 
-@app.post("/histogram", response_model=HistogramResponse, tags=["analysis"], summary="NO₂ histogram (JSON)")
+@app.post(
+    "/histogram",
+    response_model=HistogramResponse,
+    tags=["analysis"],
+    summary="NO₂ histogram (JSON)",
+)
 async def histogram(
     file: UploadFile,
     qa: float = Query(0.75, ge=0.0, le=1.0),
@@ -251,6 +258,7 @@ async def histogram(
 # ==============================================================================
 # Rendering endpoints (PNGs & CSV)
 # ==============================================================================
+
 
 @app.post("/quicklook", tags=["render"], summary="Quicklook PNG")
 async def quicklook(file: UploadFile, qa: float = Query(0.75, ge=0.0, le=1.0)):
@@ -364,6 +372,7 @@ async def tile_png_endpoint(
 # Persistence read-back (from SQLite)
 # ==============================================================================
 
+
 @app.get("/stats_recent", tags=["analysis"], summary="Recent stats from DB")
 def stats_recent(limit: int = Query(10, ge=1, le=100)):
     """
@@ -375,17 +384,21 @@ def stats_recent(limit: int = Query(10, ge=1, le=100)):
     start = time.time()
     try:
         with engine.begin() as conn:
-            rows = conn.execute(
-                _sqltext(
-                    """
+            rows = (
+                conn.execute(
+                    _sqltext(
+                        """
                     SELECT created_at, qa_threshold, count, min, mean, max
                     FROM stats
                     ORDER BY id DESC
                     LIMIT :lim
                     """
-                ),
-                dict(lim=limit),
-            ).mappings().all()
+                    ),
+                    dict(lim=limit),
+                )
+                .mappings()
+                .all()
+            )
         return {"items": [dict(r) for r in rows]}
     except Exception as e:
         ERRORS.labels(endpoint).inc()

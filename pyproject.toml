@@ -1,0 +1,21 @@
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+exclude = '''
+(
+  \.git
+ | \.venv
+ | venv
+ | grafana
+)
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 100
+skip = ["venv", ".venv", ".git", "grafana"]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+strict = false

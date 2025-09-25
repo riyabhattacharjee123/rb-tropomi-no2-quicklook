@@ -10,6 +10,7 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
+
 # Auto-materialize the synthetic test file before test collection
 def pytest_configure(config):
     import numpy as np
@@ -21,7 +22,7 @@ def pytest_configure(config):
 
     if not os.path.exists(nc_path):
         # Tiny, plausible NO2 field with QA=1 everywhere
-        no2 = (np.random.rand(32, 32).astype("float32") * 1e-5)
+        no2 = np.random.rand(32, 32).astype("float32") * 1e-5
         qa = np.ones((32, 32), dtype="float32")
         ds = xr.Dataset(
             {

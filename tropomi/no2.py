@@ -4,8 +4,10 @@
 
 import numpy as np
 import xarray as xr
+
 from .io import no2_column
 from .qa import valid_mask
+
 
 def no2_stats(ds: xr.Dataset, qa_thresh: float = 0.75) -> dict:
     """
@@ -22,6 +24,7 @@ def no2_stats(ds: xr.Dataset, qa_thresh: float = 0.75) -> dict:
         "max": float(np.nanmax(arr)),
         "qa_threshold": qa_thresh,
     }
+
 
 def no2_histogram(ds: xr.Dataset, qa_thresh: float = 0.75, bins: int = 20) -> dict:
     """
